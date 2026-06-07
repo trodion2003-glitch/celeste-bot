@@ -33,3 +33,6 @@ pydantic==2.13.4
 
 # Timezone
 pytz==2022.7.1
+
+# Image generation
+Pillow==10.4.0

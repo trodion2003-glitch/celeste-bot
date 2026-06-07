@@ -17,8 +17,9 @@ from config import BOT_TOKEN, DEBUG
 from logger_config import setup_logging, get_logger
 from models.database import init_db
 from services.redis_cache import close_redis, get_redis
-from bot.keyboards import main_menu_keyboard
+from bot.keyboards import main_menu_keyboard, share_forecast_keyboard
 from bot.messages import WELCOME_MESSAGE, MAIN_MENU_MESSAGE
+from services.image_generator import generate_forecast_image
 
 # ИМПОРТИРУЕМ ВСЁ ИЗ ONBOARDING
 from bot.handlers.onboarding import (
@@ -154,7 +155,7 @@ async def forecast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             await cache_forecast(user_id, week_start_str, forecast_text)
             logger.info(f"Forecast for user {user_id} generated via Gemini")
 
-        await _safe_reply(msg, forecast_text, reply_markup=main_menu_keyboard())
+        await _safe_reply(msg, forecast_text, reply_markup=share_forecast_keyboard(user_id))
 
         await update_streak(user_id)
 
@@ -272,6 +273,48 @@ async def moon_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         )
 
 
+async def _share_forecast(query, user_id: int) -> None:
+    """Генерирует и отправляет картинку прогноза."""
+    from services.user import get_user
+    from services.redis_cache import get_cached_forecast
+    from datetime import date, timedelta
+
+    user = await get_user(user_id)
+    if not user:
+        await query.message.reply_text("Ошибка при загрузке данных.")
+        return
+
+    await query.message.reply_text("⏳ Генерирую картинку...")
+
+    try:
+        week_start = date.today() - timedelta(days=date.today().weekday())
+        forecast_text = await get_cached_forecast(user_id, week_start.isoformat())
+
+        if not forecast_text:
+            from services.astrology import build_natal_chart
+            from services.forecast import generate_weekly_forecast
+            natal = build_natal_chart(
+                name=user.name,
+                birth_date=user.birth_date,
+                birth_time=user.birth_time,
+                lat=user.latitude,
+                lng=user.longitude,
+                tz=user.timezone,
+            )
+            forecast_text = await generate_weekly_forecast(user.name, natal, user_id)
+
+        image = generate_forecast_image(user.name, forecast_text)
+        await query.message.reply_photo(
+            photo=image,
+            caption="✦ Мой прогноз от Celesté 🌙\n\nt.me/CelesteAstroBot",
+        )
+        logger.info(f"Forecast shared by user {user_id}")
+
+    except Exception as e:
+        logger.error(f"Error sharing forecast for user {user_id}: {e}")
+        await query.message.reply_text("Ошибка при создании картинки 😔\n\nПопробуй позже.")
+
+
 async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Обработчик нажатий кнопок"""
     query = update.callback_query
@@ -296,6 +339,9 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         await premium_command(update, context)
     elif query.data == "settings":
         await settings_command(update, context)
+    elif query.data.startswith("share_forecast_"):
+        target_user_id = int(query.data.split("_")[-1])
+        await _share_forecast(query, target_user_id)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
