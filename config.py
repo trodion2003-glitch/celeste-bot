@@ -27,7 +27,7 @@ DEEPSEEK_MAX_TOKENS = 1024
 # ============================================================================
 # DATABASE
 # ============================================================================
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/celeste")
+DATABASE_URL = (os.getenv("DATABASE_URL") or "postgresql+asyncpg://postgres:password@localhost:5432/celeste").strip()
 # Railway даёт postgresql://, SQLAlchemy async требует postgresql+asyncpg://
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
@@ -38,7 +38,7 @@ SQLALCHEMY_DATABASE_URL = DATABASE_URL.replace("+asyncpg", "")
 # ============================================================================
 # REDIS
 # ============================================================================
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+REDIS_URL = (os.getenv("REDIS_URL") or "redis://localhost:6379/0").strip()
 
 # Времена жизни кэша (в секундах)
 CACHE_TTL_FORECAST = 24 * 3600  # 24 часа
