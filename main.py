@@ -293,10 +293,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             reply_markup=main_menu_keyboard()
         )
     elif query.data == "premium":
-        await query.message.reply_text(
-            "✨ Premium скоро!",
-            reply_markup=main_menu_keyboard()
-        )
+        await premium_command(update, context)
     elif query.data == "settings":
         await settings_command(update, context)
 
