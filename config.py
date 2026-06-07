@@ -28,6 +28,9 @@ DEEPSEEK_MAX_TOKENS = 1024
 # DATABASE
 # ============================================================================
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/celeste")
+# Railway даёт postgresql://, SQLAlchemy async требует postgresql+asyncpg://
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
 # Для alembic (синхронное подключение)
 SQLALCHEMY_DATABASE_URL = DATABASE_URL.replace("+asyncpg", "")
