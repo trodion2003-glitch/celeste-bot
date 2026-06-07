@@ -3,7 +3,11 @@ main.py — запуск Celesté Bot (ИСПРАВЛЕННАЯ ВЕРСИЯ)
 """
 
 import logging
+import warnings
 from telegram import Update, BotCommand
+from telegram.warnings import PTBUserWarning
+
+warnings.filterwarnings("ignore", message=".*per_message=False.*", category=PTBUserWarning)
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, CallbackQueryHandler,
     ConversationHandler, filters, ContextTypes
