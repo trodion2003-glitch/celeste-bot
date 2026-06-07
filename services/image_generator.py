@@ -134,7 +134,7 @@ def _draw_image(title_text: str, subtitle: str, body_text: str, height: int) -> 
     # Подвал
     footer_y = height - 130
     draw.line([(PADDING, footer_y), (WIDTH - PADDING, footer_y)], fill=COLORS["accent"], width=3)
-    draw.text((PADDING, footer_y + 20), "🌙 Celesté — Персональная астрология", font=font_small, fill=COLORS["gold"])
+    draw.text((PADDING, footer_y + 20), "Celesté — Персональная астрология", font=font_small, fill=COLORS["gold"])
     draw.text((PADDING, footer_y + 58), "t.me/CelesteAstroBot", font=font_small, fill=COLORS["text"])
 
     buf = BytesIO()
