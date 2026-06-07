@@ -3,7 +3,7 @@
     "builder": "nixpacks"
   },
   "deploy": {
-    "startCommand": "python3 main.py",
+    "startCommand": "alembic upgrade head && python3 main.py",
     "restartPolicyMaxRetries": 5,
     "restartPolicyWindowMs": 300000
   }
