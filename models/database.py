@@ -70,8 +70,20 @@ async def init_db():
     Создаёт все таблицы в БД.
     Вызывается в main.py при запуске бота.
     """
+    from sqlalchemy import text
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Гарантируем наличие колонок счётчиков (на случай если миграция не применилась)
+        daily_counter_cols = [
+            "compat_per_day_today",
+            "forecast_per_day_today",
+            "day_per_day_today",
+            "moon_per_day_today",
+        ]
+        for col in daily_counter_cols:
+            await conn.execute(text(
+                f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} INTEGER DEFAULT 0"
+            ))
     logger.info("✓ Database initialized")
 
 
