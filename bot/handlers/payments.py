@@ -6,7 +6,6 @@ import logging
 
 from telegram import Update, LabeledPrice
 from telegram.ext import ContextTypes
-from telegram.constants import Currency
 
 from services.premium import get_premium_price, get_premium_info, activate_premium, is_premium
 from services.user import get_user
@@ -39,7 +38,7 @@ async def premium_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         title="Celesté Premium",
         description="30 дней неограниченного доступа",
         payload="premium_30_days",
-        currency=Currency.XTR,
+        currency="XTR",
         prices=[LabeledPrice("Premium 30 дней", get_premium_price())],
         provider_token="",
         start_parameter="premium",
