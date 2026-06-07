@@ -18,123 +18,137 @@ COLORS = {
 
 WIDTH = 1080
 HEIGHT = 1920
+PADDING = 60
+
+# Пути к шрифтам (пробуем по очереди)
+_FONT_CANDIDATES = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+    "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+    "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+    "/System/Library/Fonts/Helvetica.ttc",  # macOS fallback
+    "/System/Library/Fonts/Arial.ttf",
+]
+
+_FONT_BOLD_CANDIDATES = [
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+    "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+    "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf",
+    "/System/Library/Fonts/Helvetica.ttc",
+]
 
 
-def wrap_text(text: str, max_width: int = 50) -> list:
+def _try_load(paths: list[str], size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    for path in paths:
+        try:
+            return ImageFont.truetype(path, size)
+        except (OSError, IOError):
+            continue
+    # Pillow 10+ supports size parameter on load_default
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:
+        return ImageFont.load_default()
+
+
+def _get_fonts():
+    title  = _try_load(_FONT_BOLD_CANDIDATES, 72)
+    header = _try_load(_FONT_CANDIDATES, 44)
+    body   = _try_load(_FONT_CANDIDATES, 36)
+    small  = _try_load(_FONT_CANDIDATES, 28)
+    return title, header, body, small
+
+
+def wrap_text(text: str, font: ImageFont.FreeTypeFont, max_width_px: int) -> list[str]:
+    """Перенос строк по пикселям (точный)."""
     lines = []
     for paragraph in text.split("\n"):
-        if not paragraph:
+        if not paragraph.strip():
             lines.append("")
             continue
         words = paragraph.split()
-        current_line = ""
+        current = ""
         for word in words:
-            if len(current_line) + len(word) + 1 > max_width:
-                if current_line:
-                    lines.append(current_line)
-                current_line = word
+            test = (current + " " + word).strip()
+            try:
+                w = font.getlength(test)
+            except AttributeError:
+                w = len(test) * 20  # грубая оценка для fallback шрифта
+            if w > max_width_px and current:
+                lines.append(current)
+                current = word
             else:
-                current_line += (" " if current_line else "") + word
-        if current_line:
-            lines.append(current_line)
+                current = test
+        if current:
+            lines.append(current)
     return lines
 
 
+def _draw_image(title_text: str, subtitle: str, body_text: str, height: int) -> BytesIO:
+    img = Image.new("RGB", (WIDTH, height), COLORS["bg"])
+    draw = ImageDraw.Draw(img)
+
+    font_title, font_header, font_body, font_small = _get_fonts()
+
+    max_text_width = WIDTH - PADDING * 2
+    y = PADDING
+
+    # Заголовок (логотип)
+    draw.text((PADDING, y), title_text, font=font_title, fill=COLORS["accent"])
+    y += 90
+
+    # Подзаголовок
+    draw.text((PADDING, y), subtitle, font=font_header, fill=COLORS["text"])
+    y += 60
+
+    # Дата
+    today = datetime.now().strftime("%d.%m.%Y")
+    draw.text((PADDING, y), today, font=font_small, fill=COLORS["gold"])
+    y += 50
+
+    # Разделитель
+    draw.line([(PADDING, y), (WIDTH - PADDING, y)], fill=COLORS["accent"], width=3)
+    y += 40
+
+    # Тело
+    lines = wrap_text(body_text, font_body, max_text_width)
+    for line in lines:
+        if y > height - 160:
+            draw.text((PADDING, y), "...", font=font_body, fill=COLORS["text"])
+            break
+        draw.text((PADDING, y), line, font=font_body, fill=COLORS["text"])
+        y += 48
+
+    # Подвал
+    footer_y = height - 130
+    draw.line([(PADDING, footer_y), (WIDTH - PADDING, footer_y)], fill=COLORS["accent"], width=3)
+    draw.text((PADDING, footer_y + 20), "🌙 Celesté — Персональная астрология", font=font_small, fill=COLORS["gold"])
+    draw.text((PADDING, footer_y + 58), "t.me/CelesteAstroBot", font=font_small, fill=COLORS["text"])
+
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf
+
+
 def generate_forecast_image(name: str, forecast_text: str) -> BytesIO:
-    try:
-        img = Image.new("RGB", (WIDTH, HEIGHT), COLORS["bg"])
-        draw = ImageDraw.Draw(img)
-
-        font = ImageFont.load_default()
-
-        y_pos = 60
-
-        draw.text((60, y_pos), "✦ CELESTÉ", fill=COLORS["accent"])
-        y_pos += 50
-
-        draw.text((60, y_pos), f"Прогноз для {name}", fill=COLORS["text"])
-        y_pos += 50
-
-        today = datetime.now().strftime("%d.%m.%Y")
-        draw.text((60, y_pos), f"Дата: {today}", fill=COLORS["gold"])
-        y_pos += 60
-
-        draw.line([(60, y_pos), (WIDTH - 60, y_pos)], fill=COLORS["accent"], width=3)
-        y_pos += 40
-
-        lines = wrap_text(forecast_text, max_width=60)
-
-        for line in lines:
-            if y_pos > HEIGHT - 150:
-                draw.text((60, y_pos), "...", fill=COLORS["text"])
-                break
-            draw.text((60, y_pos), line, fill=COLORS["text"])
-            y_pos += 35
-
-        y_pos = HEIGHT - 120
-        draw.line([(60, y_pos), (WIDTH - 60, y_pos)], fill=COLORS["accent"], width=3)
-        y_pos += 30
-        draw.text((60, y_pos), "🌙 Celesté — Персональная астрология", fill=COLORS["gold"])
-        y_pos += 35
-        draw.text((60, y_pos), "t.me/CelesteAstroBot", fill=COLORS["text"])
-
-        buffer = BytesIO()
-        img.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        logger.info(f"Forecast image generated for {name}")
-        return buffer
-
-    except Exception as e:
-        logger.error(f"Error generating forecast image: {e}")
-        raise
+    buf = _draw_image(
+        title_text="✦ CELESTÉ",
+        subtitle=f"Прогноз для {name}",
+        body_text=forecast_text,
+        height=HEIGHT,
+    )
+    logger.info(f"Forecast image generated for {name}")
+    return buf
 
 
 def generate_day_card_image(name: str, day_card_text: str) -> BytesIO:
-    try:
-        img = Image.new("RGB", (WIDTH, 1400), COLORS["bg"])
-        draw = ImageDraw.Draw(img)
-
-        font = ImageFont.load_default()
-
-        y_pos = 60
-
-        draw.text((60, y_pos), "☽ КАРТА ДНЯ", fill=COLORS["accent"])
-        y_pos += 50
-
-        draw.text((60, y_pos), f"Для {name}", fill=COLORS["text"])
-        y_pos += 50
-
-        today = datetime.now().strftime("%d.%m.%Y")
-        draw.text((60, y_pos), f"Дата: {today}", fill=COLORS["gold"])
-        y_pos += 60
-
-        draw.line([(60, y_pos), (WIDTH - 60, y_pos)], fill=COLORS["accent"], width=3)
-        y_pos += 40
-
-        lines = wrap_text(day_card_text, max_width=60)
-
-        for line in lines:
-            if y_pos > 1400 - 150:
-                draw.text((60, y_pos), "...", fill=COLORS["text"])
-                break
-            draw.text((60, y_pos), line, fill=COLORS["text"])
-            y_pos += 35
-
-        y_pos = 1400 - 120
-        draw.line([(60, y_pos), (WIDTH - 60, y_pos)], fill=COLORS["accent"], width=3)
-        y_pos += 30
-        draw.text((60, y_pos), "🌙 Celesté — Персональная астрология", fill=COLORS["gold"])
-        y_pos += 35
-        draw.text((60, y_pos), "t.me/CelesteAstroBot", fill=COLORS["text"])
-
-        buffer = BytesIO()
-        img.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        logger.info(f"Day card image generated for {name}")
-        return buffer
-
-    except Exception as e:
-        logger.error(f"Error generating day card image: {e}")
-        raise
+    buf = _draw_image(
+        title_text="☽ КАРТА ДНЯ",
+        subtitle=f"Для {name}",
+        body_text=day_card_text,
+        height=1400,
+    )
+    logger.info(f"Day card image generated for {name}")
+    return buf
