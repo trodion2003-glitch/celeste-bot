@@ -10,7 +10,7 @@ from telegram.warnings import PTBUserWarning
 warnings.filterwarnings("ignore", message=".*per_message=False.*", category=PTBUserWarning)
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, CallbackQueryHandler,
-    ConversationHandler, filters, ContextTypes
+    ConversationHandler, PreCheckoutQueryHandler, filters, ContextTypes
 )
 
 from config import BOT_TOKEN, DEBUG
@@ -26,6 +26,9 @@ from bot.handlers.onboarding import (
     get_name, get_birth_date, get_birth_time, get_birth_place, skip_birth_time, cancel
 )
 from bot.handlers.compatibility import get_compatibility_handler
+from bot.handlers.payments import (
+    premium_command, precheckout_callback, successful_payment_callback,
+)
 from bot.handlers.settings import (
     settings_command, settings_push_handler,
     push_enable_handler, push_disable_handler, settings_back_handler,
@@ -417,6 +420,11 @@ def main():
     application.add_handler(CommandHandler("day", day_command))
     application.add_handler(CommandHandler("moon", moon_command))
     application.add_handler(get_compatibility_handler())
+
+    # Premium & Payments
+    application.add_handler(CommandHandler("premium", premium_command))
+    application.add_handler(PreCheckoutQueryHandler(precheckout_callback))
+    application.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
 
     # Settings
     application.add_handler(CommandHandler("settings", settings_command))

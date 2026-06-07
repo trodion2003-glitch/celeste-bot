@@ -71,6 +71,14 @@ class User(Base):
     data_complete = Column(Boolean, default=False)  # Все ли данные заполнены?
 
     # ======================================================================
+    # Лимиты (счётчики на день)
+    # ======================================================================
+    compat_per_day_today = Column(Integer, default=0)
+    forecast_per_day_today = Column(Integer, default=0)
+    day_per_day_today = Column(Integer, default=0)
+    moon_per_day_today = Column(Integer, default=0)
+
+    # ======================================================================
     # Уведомления
     # ======================================================================
     push_enabled = Column(Boolean, default=True)  # Получать ли push-уведомления?

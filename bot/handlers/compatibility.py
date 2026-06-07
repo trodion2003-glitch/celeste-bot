@@ -40,6 +40,12 @@ async def start_compatibility(update: Update, ctx: ContextTypes.DEFAULT_TYPE) ->
         await msg.reply_text("Сначала пройди онбординг! 👋\n\nНапиши /start")
         return ConversationHandler.END
 
+    from services.premium import check_limit
+    allowed, limit_msg = await check_limit(user, "compat_per_day")
+    if not allowed:
+        await msg.reply_text(limit_msg)
+        return ConversationHandler.END
+
     natal = user.natal_chart
     if not natal:
         natal = build_natal_chart(
