@@ -3,6 +3,7 @@ services/image_generator.py — генерация красивых картин
 """
 
 import logging
+import re
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 from datetime import datetime
@@ -60,6 +61,15 @@ def _get_fonts():
     return title, header, body, small
 
 
+def strip_markdown(text: str) -> str:
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text, flags=re.DOTALL)
+    text = re.sub(r'\*(.+?)\*',     r'\1', text, flags=re.DOTALL)
+    text = re.sub(r'__(.+?)__',     r'\1', text, flags=re.DOTALL)
+    text = re.sub(r'_(.+?)_',       r'\1', text, flags=re.DOTALL)
+    text = re.sub(r'^#+\s*',        '',    text, flags=re.MULTILINE)
+    return text
+
+
 def wrap_text(text: str, font: ImageFont.FreeTypeFont, max_width_px: int) -> list[str]:
     """Перенос строк по пикселям (точный)."""
     lines = []
@@ -91,6 +101,7 @@ def _draw_image(title_text: str, subtitle: str, body_text: str, height: int) -> 
 
     font_title, font_header, font_body, font_small = _get_fonts()
 
+    body_text = strip_markdown(body_text)
     max_text_width = WIDTH - PADDING * 2
     y = PADDING
 
