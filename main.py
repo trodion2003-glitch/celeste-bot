@@ -308,6 +308,12 @@ async def post_init(application: Application) -> None:
     logger.info("🌙 Initializing Celesté Bot...")
 
     try:
+        await application.bot.delete_webhook(drop_pending_updates=True)
+        logger.info("✓ Webhook cleared")
+    except Exception as e:
+        logger.error(f"Webhook clear error: {e}")
+
+    try:
         await init_db()
         logger.info("✓ Database initialized")
     except Exception as e:
