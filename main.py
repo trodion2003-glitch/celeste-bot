@@ -199,19 +199,25 @@ async def day_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await msg.reply_text("☽ Строю карту дня...")
 
     try:
-        from services.redis_cache import get_redis
         from services.astrology import build_natal_chart, get_current_transits, calculate_aspects
         from services.day_card import generate_day_card
         from datetime import date
 
-        redis = await get_redis()
-        cache_key = f"day_card:{user_id}:{date.today().isoformat()}"
-        cached = await redis.get(cache_key)
+        day_card_text = None
 
-        if cached:
-            logger.info(f"Day card for user {user_id} from cache")
-            day_card_text = cached
-        else:
+        # Пробуем Redis-кэш (опционально)
+        try:
+            from services.redis_cache import get_redis
+            redis = await get_redis()
+            cache_key = f"day_card:{user_id}:{date.today().isoformat()}"
+            cached = await redis.get(cache_key)
+            if cached:
+                day_card_text = cached
+                logger.info(f"Day card for user {user_id} from cache")
+        except Exception as redis_err:
+            logger.warning(f"Redis unavailable, generating without cache: {redis_err}")
+
+        if not day_card_text:
             natal = build_natal_chart(
                 name=user.name,
                 birth_date=user.birth_date,
@@ -223,9 +229,13 @@ async def day_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             transits = get_current_transits()
             aspects = calculate_aspects(transits)
             day_card_text = await generate_day_card(user.name, natal, transits, aspects)
-
-            await redis.setex(cache_key, 86400, day_card_text)
             logger.info(f"Day card generated for user {user_id}")
+
+            # Сохраняем в кэш если Redis доступен
+            try:
+                await redis.setex(cache_key, 86400, day_card_text)
+            except Exception:
+                pass
 
         await _safe_reply(msg, day_card_text, reply_markup=main_menu_keyboard())
 
@@ -258,21 +268,31 @@ async def moon_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await msg.reply_text("🌙 Генерирую лунный календарь...")
 
     try:
-        from services.redis_cache import get_redis
         from services.moon_calendar import generate_moon_calendar
         from datetime import date
 
-        redis = await get_redis()
-        cache_key = f"moon_calendar:{user_id}:{date.today().isoformat()}"
-        cached = await redis.get(cache_key)
+        calendar_text = None
 
-        if cached:
-            logger.info(f"Moon calendar for user {user_id} from cache")
-            calendar_text = cached
-        else:
+        # Пробуем Redis-кэш (опционально)
+        try:
+            from services.redis_cache import get_redis
+            redis = await get_redis()
+            cache_key = f"moon_calendar:{user_id}:{date.today().isoformat()}"
+            cached = await redis.get(cache_key)
+            if cached:
+                calendar_text = cached
+                logger.info(f"Moon calendar for user {user_id} from cache")
+        except Exception as redis_err:
+            logger.warning(f"Redis unavailable, generating without cache: {redis_err}")
+
+        if not calendar_text:
             calendar_text = await generate_moon_calendar(user.name, days=7)
-            await redis.setex(cache_key, 86400, calendar_text)
             logger.info(f"Moon calendar generated for user {user_id}")
+
+            try:
+                await redis.setex(cache_key, 86400, calendar_text)
+            except Exception:
+                pass
 
         await _safe_reply(msg, calendar_text, reply_markup=main_menu_keyboard())
 
