@@ -73,6 +73,9 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
             await activate_premium(db_user)
             await session.commit()
 
+    from services.analytics import track_premium_purchase
+    await track_premium_purchase(user_id)
+
     await update.message.reply_text(
         "✨ Спасибо за покупку!\n\n"
         "🎉 Твой Premium активирован на 30 дней!\n\n"

@@ -36,3 +36,6 @@ pytz==2022.7.1
 
 # Image generation
 Pillow==10.4.0
+
+# Monitoring
+sentry-sdk==2.19.2

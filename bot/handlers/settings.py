@@ -24,8 +24,9 @@ _SETTINGS_KB = InlineKeyboardMarkup([
 async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Команда /settings"""
     msg = update.effective_message
-    if update.callback_query:
-        await update.callback_query.answer()
+
+    from services.analytics import track_command
+    await track_command(update.effective_user.id, "settings")
 
     user = await get_user(update.effective_user.id)
     if not user:

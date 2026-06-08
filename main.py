@@ -13,7 +13,7 @@ from telegram.ext import (
     ConversationHandler, PreCheckoutQueryHandler, filters, ContextTypes
 )
 
-from config import BOT_TOKEN, DEBUG
+from config import BOT_TOKEN, DEBUG, ENVIRONMENT, SENTRY_DSN
 from logger_config import setup_logging, get_logger
 from models.database import init_db
 from services.redis_cache import close_redis, get_redis
@@ -40,6 +40,17 @@ from services.push_notifications import (
 
 setup_logging()
 logger = get_logger(__name__)
+
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,
+        environment=ENVIRONMENT,
+        integrations=[LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)],
+    )
+    logger.info("✓ Sentry initialized")
 
 
 async def _safe_reply(msg, text: str, **kwargs):
@@ -110,6 +121,9 @@ async def forecast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     user_id = update.effective_user.id
     msg = update.effective_message
 
+    from services.analytics import track_command
+    await track_command(user_id, "forecast")
+
     from services.user import get_user, update_streak
     user = await get_user(user_id)
 
@@ -169,6 +183,9 @@ async def day_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     user_id = update.effective_user.id
     msg = update.effective_message
 
+    from services.analytics import track_command
+    await track_command(user_id, "day")
+
     from services.user import get_user
     user = await get_user(user_id)
 
@@ -224,6 +241,9 @@ async def moon_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """Команда /moon — лунный календарь на 7 дней"""
     user_id = update.effective_user.id
     msg = update.effective_message
+
+    from services.analytics import track_command
+    await track_command(user_id, "moon")
 
     from services.user import get_user
     user = await get_user(user_id)
