@@ -110,9 +110,6 @@ async def forecast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     user_id = update.effective_user.id
     msg = update.effective_message
 
-    if update.callback_query:
-        await update.callback_query.answer()
-
     from services.user import get_user, update_streak
     user = await get_user(user_id)
 
@@ -172,9 +169,6 @@ async def day_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     user_id = update.effective_user.id
     msg = update.effective_message
 
-    if update.callback_query:
-        await update.callback_query.answer()
-
     from services.user import get_user
     user = await get_user(user_id)
 
@@ -230,9 +224,6 @@ async def moon_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """Команда /moon — лунный календарь на 7 дней"""
     user_id = update.effective_user.id
     msg = update.effective_message
-
-    if update.callback_query:
-        await update.callback_query.answer()
 
     from services.user import get_user
     user = await get_user(user_id)
